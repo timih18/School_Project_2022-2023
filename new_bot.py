@@ -75,8 +75,9 @@ def text(message):
 def admin(message):
     markup = types.InlineKeyboardMarkup(row_width=1)
     add_plant_button = types.InlineKeyboardButton('Добавить растение', callback_data='add_plant')
-    change_time = types.InlineKeyboardButton('Изменить время полива', callback_data='change_time')
-    markup.add(add_plant_button, change_time)
+    change_time_button = types.InlineKeyboardButton('Изменить время полива', callback_data='change_time')
+    delete_button = types.InlineKeyboardButton('Удалить растение', callback_data='delete')
+    markup.add(add_plant_button, change_time_button, delete_button)
     bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=markup)
 
 
