@@ -5,10 +5,9 @@ from threading import Thread
 
 
 bot = telebot.TeleBot('5845845071:AAEbCWvEapCdLRbLI7VUQSQGgyPg_T-bsNE')
-data = {'cnt_start': 0}
-# todo: проверить работает ли это в разных чатах
+data = {'cnt_start': 0, 'cnt_plants': 0}
 # todo: добавить команду /sp
-# todo: добавить уведомления для каждого цветка, след удалить изменить кнопку изменнения времени полива
+# todo: изменить кнопку изменнения времени полива
 # todo: добавить удаление растения
 # todo: изменить реагирование бота на все сообщения
 
@@ -21,9 +20,6 @@ def start(message):
         data['admin_id'] = message.from_user.id
         data['chat_id'] = message.chat.id
         data['cnt_start'] = 1
-        data['cnt_plants'] = 0
-        data['time_of_feeding'] = 100
-        data['time_since_last_feed'] = 0
     markup = types.InlineKeyboardMarkup(row_width=1)
     admin_button = types.InlineKeyboardButton('Настройка бота', callback_data='admin')
     markup.add(admin_button)
@@ -41,11 +37,6 @@ def callback(call):
                 admin(call.message)
             else:
                 bot.send_message(call.message.chat.id, 'Ты не администратор этого бота!')
-        elif call.data == 'time_of_feeding':
-            if call.from_user.id == data['admin_id']:
-                time_of_feeding(call.message)
-            else:
-                bot.send_message(call.message.chat.id, 'Ты не администратор этого бота!')
         elif call.data == 'add_plant':
             if call.from_user.id == data['admin_id']:
                 add_plant(call.message)
@@ -59,36 +50,23 @@ def text(message):
         admin(message)
     if message.text[1:] in data:
         msg = f'<b>{message.text[1:]}</b>' + '<b>.</b> ' + f'<b>{data[message.text[1:]]["name"]}</b>' + '\n' +\
-              'Описание: ' + data[message.text[1:]]['description'] +\
-              '\n' + 'Кабинеты: ' + data[message.text[1:]]['rooms']
+              'Поливать каждые ' + str(data[message.text[1:]]['time_of_feeding']) + ' дня/дней' + '\n' + 'Описание: ' +\
+              data[message.text[1:]]['description'] + '\n' + 'Кабинеты: ' + data[message.text[1:]]['rooms']
         bot.send_message(message.chat.id, msg, parse_mode='html')
     if len(message.text) > 18:
         command = message.text[:-17]
         if command[1:] in data:
             msg = f'<b>{command[1:]}</b>' + '<b>.</b> ' + f'<b>{data[command[1:]]["name"]}</b>' + '\n' + \
-                  'Описание: ' + data[command[1:]]['description'] + \
-                  '\n' + 'Кабинеты: ' + data[command[1:]]['rooms']
+                  'Поливать каждые ' + str(data[command[1:]]['time_of_feeding']) + ' дня/дней' + '\n' + 'Описание: ' + \
+                  data[command[1:]]['description'] + '\n' + 'Кабинеты: ' + data[command[1:]]['rooms']
             bot.send_message(message.chat.id, msg, parse_mode='html')
 
 
 def admin(message):
     markup = types.InlineKeyboardMarkup(row_width=1)
-    time_of_feeding_button = types.InlineKeyboardButton('Изменить время полива', callback_data='time_of_feeding')
     add_plant_button = types.InlineKeyboardButton('Добавить растение', callback_data='add_plant')
-    markup.add(time_of_feeding_button, add_plant_button)
+    markup.add(add_plant_button)
     bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=markup)
-
-
-def time_of_feeding(message):
-    msg = bot.send_message(message.chat.id, 'Как часто присылать уведомления о поливе?' + '\n' +
-                           'Напиши время через "/". Например, "/3".')
-    bot.register_next_step_handler(msg, after_time_of_feeding)
-
-
-def after_time_of_feeding(message):
-    global data
-    bot.send_message(message.chat.id, 'Уведомления будут присылаться каждые ' + message.text[1:] + ' дней')
-    data['time_of_feeding'] = int(message.text[1:])
 
 
 def add_plant(message):
@@ -108,11 +86,19 @@ def after_add_plant(message):
 def after_add_plant_2(message):
     global data
     data[str(data['cnt_plants'])]['description'] = message.text[1:]
-    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/"')
+    msg = bot.send_message(message.chat.id, 'Раз в сколько дней присылать уведомления о поливе? Введи число через "/"')
     bot.register_next_step_handler(msg, after_add_plant_3)
 
 
 def after_add_plant_3(message):
+    global data
+    data[str(data['cnt_plants'])]['time_of_feeding'] = int(message.text[1:])
+    data[str(data['cnt_plants'])]['time_since_feed'] = 0
+    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/"')
+    bot.register_next_step_handler(msg, after_add_plant_4)
+
+
+def after_add_plant_4(message):
     global data
     data[str(data['cnt_plants'])]['rooms'] = message.text[1:]
     msg = f'Твое растение сохранено под номером {data["cnt_plants"]}. Ты можешь написать /{data["cnt_plants"]},' \
@@ -121,22 +107,19 @@ def after_add_plant_3(message):
 
 
 def reminder():
-    global data
-    bot.send_message(data['chat_id'], 'Надо полить цветы')
-
-
-def check_time():
-    global data
-    if data['cnt_start'] > 0:
-        data['time_since_last_feed'] += 1
-        if data['time_since_last_feed'] == data['time_of_feeding']:
-            reminder()
-            data['time_since_last_feed'] = 0
+    for i in range(1, data['cnt_plants']+1):
+        if 'time_since_feed' in data[str(i)]:
+            if data[str(i)]['time_of_feeding'] == data[str(i)]['time_since_feed']:
+                msg = f'Надо полить <b>{data[str(i)]["name"]}</b> (номер {i})'
+                bot.send_message(data['chat_id'], msg, parse_mode='html')
+                data[str(i)]['time_since_feed'] = 0
+            else:
+                data[str(i)]['time_since_feed'] += 1
 
 
 def main():
     global data
-    schedule.every(1).second.do(check_time)
+    schedule.every(1).seconds.do(reminder)
 
     while True:
         schedule.run_pending()
