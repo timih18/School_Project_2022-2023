@@ -2,10 +2,10 @@ import telebot
 from telebot import types
 import schedule
 from threading import Thread
-import time
+
 
 bot = telebot.TeleBot('5845845071:AAEbCWvEapCdLRbLI7VUQSQGgyPg_T-bsNE')
-data = {}
+data = {'cnt_start': 0}
 # todo: проверить работает ли это в разных чатах
 # todo: добавить команду /sp
 cnt_start = 0
@@ -15,13 +15,14 @@ cnt_plants = 0
 @bot.message_handler(commands=['start'])
 def start(message):
     global data
-    data['cnt_start'] = 0
     if data['cnt_start'] == 0:
         # todo: Сделать двойной словарь для разных чатов
         data['admin_id'] = message.from_user.id
         data['chat_id'] = message.chat.id
         data['cnt_start'] = 1
         data['cnt_plants'] = 0
+        data['time_of_feeding'] = 100
+        data['time_since_last_feed'] = 0
     markup = types.InlineKeyboardMarkup(row_width=1)
     admin_button = types.InlineKeyboardButton('Настройка бота', callback_data='admin')
     markup.add(admin_button)
@@ -123,14 +124,18 @@ def reminder():
     bot.send_message(data['chat_id'], 'Надо полить цветы')
 
 
+def check_time():
+    global data
+    if data['cnt_start'] > 0:
+        data['time_since_last_feed'] += 1
+        if data['time_since_last_feed'] == data['time_of_feeding']:
+            reminder()
+            data['time_since_last_feed'] = 0
+
+
 def main():
     global data
-    # todo: Сделать без time.sleep + возможность повторной смены времени полива
-    time.sleep(30)
-    time_feed = data['time_of_feeding']
-    schedule.every(time_feed).days.do(reminder)
-    # Для примера
-    schedule.every(time_feed).seconds.do(reminder)
+    schedule.every(1).second.do(check_time)
 
     while True:
         schedule.run_pending()
