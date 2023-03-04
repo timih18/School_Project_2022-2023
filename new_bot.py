@@ -8,8 +8,8 @@ bot = telebot.TeleBot('5845845071:AAEbCWvEapCdLRbLI7VUQSQGgyPg_T-bsNE')
 data = {'cnt_start': 0}
 # todo: проверить работает ли это в разных чатах
 # todo: добавить команду /sp
-cnt_start = 0
-cnt_plants = 0
+# todo: добавить уведомления для каждого цветка, след удалить изменить кнопку изменнения времени полива
+# todo: добавить удаление растения
 
 
 @bot.message_handler(commands=['start'])
