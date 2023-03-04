@@ -7,6 +7,7 @@ import time
 bot = telebot.TeleBot('5845845071:AAEbCWvEapCdLRbLI7VUQSQGgyPg_T-bsNE')
 data = {}
 # todo: проверить работает ли это в разных чатах
+# todo: добавить команду /sp
 cnt_start = 0
 cnt_plants = 0
 
@@ -55,15 +56,17 @@ def text(message):
     if message.text == '/admin' or message.text == '/admin@testBot435364Bot':
         admin(message)
     if message.text[1:] in data:
-        msg = message.text[1:] + '. ' + data[message.text[1:]]['name'] + '\n' + data[message.text[1:]]['description'] +\
-              '\n' + data[message.text[1:]]['rooms']
-        bot.send_message(message.chat.id, msg)
+        msg = f'<b>{message.text[1:]}</b>' + '<b>.</b> ' + f'<b>{data[message.text[1:]]["name"]}</b>' + '\n' +\
+              'Описание: ' + data[message.text[1:]]['description'] +\
+              '\n' + 'Кабинеты: ' + data[message.text[1:]]['rooms']
+        bot.send_message(message.chat.id, msg, parse_mode='html')
     if len(message.text) > 18:
         command = message.text[:-17]
         if command[1:] in data:
-            msg = command[1:] + '. ' + data[command[1:]]['name'] + '\n' + data[command[1:]]['description'] + '\n' + \
-                  data[command[1:]]['rooms']
-            bot.send_message(message.chat.id, msg)
+            msg = f'<b>{command[1:]}</b>' + '<b>.</b> ' + f'<b>{data[command[1:]]["name"]}</b>' + '\n' + \
+                  'Описание: ' + data[command[1:]]['description'] + \
+                  '\n' + 'Кабинеты: ' + data[command[1:]]['rooms']
+            bot.send_message(message.chat.id, msg, parse_mode='html')
 
 
 def admin(message):
