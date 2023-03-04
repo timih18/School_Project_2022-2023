@@ -5,7 +5,6 @@ from threading import Thread
 import time
 
 bot = telebot.TeleBot('5845845071:AAEbCWvEapCdLRbLI7VUQSQGgyPg_T-bsNE')
-# todo: добавить импорт словаря
 data = {}
 # todo: проверить работает ли это в разных чатах
 cnt_start = 0
@@ -14,12 +13,14 @@ cnt_plants = 0
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    global data, cnt_start
-    if cnt_start == 0:
+    global data
+    data['cnt_start'] = 0
+    if data['cnt_start'] == 0:
         # todo: Сделать двойной словарь для разных чатов
         data['admin_id'] = message.from_user.id
         data['chat_id'] = message.chat.id
-        cnt_start += 1
+        data['cnt_start'] = 1
+        data['cnt_plants'] = 0
     markup = types.InlineKeyboardMarkup(row_width=1)
     admin_button = types.InlineKeyboardButton('Настройка бота', callback_data='admin')
     markup.add(admin_button)
@@ -53,10 +54,14 @@ def callback(call):
 def text(message):
     if message.text == '/admin' or message.text == '/admin@testBot435364Bot':
         admin(message)
-    #  todo: добавить возможность вызова этой команды с помощью /1@testBot435364Bot
-    if data[message.text[1:]]:
+    if message.text[1:] in data:
         msg = message.text[1:] + '. ' + data[message.text[1:]]['name'] + '\n' + data[message.text[1:]]['description']
         bot.send_message(message.chat.id, msg)
+    if len(message.text) > 18:
+        command = message.text[:-17]
+        if command[1:] in data:
+            msg = command[1:] + '. ' + data[command[1:]]['name'] + '\n' + data[command[1:]]['description']
+            bot.send_message(message.chat.id, msg)
 
 
 def admin(message):
@@ -80,26 +85,25 @@ def after_time_of_feeding(message):
     data['time_of_feeding'] = int(message.text[1:])
 
 
-# todo: добавить для каждого цветка свой словарь
 def add_plant(message):
     msg = bot.send_message(message.chat.id, 'Введи название растения через "/"')
     bot.register_next_step_handler(msg, after_add_plant)
 
 
 def after_add_plant(message):
-    global data, cnt_plants
+    global data
     data_plant = {'name': message.text[1:]}
     msg = bot.send_message(message.chat.id, 'Теперь введи краткое описание через "/"')
     bot.register_next_step_handler(msg, after_add_plant_2)
-    cnt_plants += 1
-    data[str(cnt_plants)] = data_plant
+    data['cnt_plants'] += 1
+    data[str(data['cnt_plants'])] = data_plant
 
 
 def after_add_plant_2(message):
-    global data, cnt_plants
-    data[str(cnt_plants)]['description'] = message.text[1:]
-    bot.send_message(message.chat.id, f'Описание сохранено. Твое растение сохранено под номером {cnt_plants}. '
-                                      f'Ты можешь написать /{cnt_plants},'
+    global data
+    data[str(data['cnt_plants'])]['description'] = message.text[1:]
+    bot.send_message(message.chat.id, f'Описание сохранено. Твое растение сохранено под номером {data["cnt_plants"]}. '
+                                      f'Ты можешь написать /{data["cnt_plants"]},'
                                       f' чтобы увидеть подробную информацию о растении.')
 
 
