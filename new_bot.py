@@ -55,12 +55,14 @@ def text(message):
     if message.text == '/admin' or message.text == '/admin@testBot435364Bot':
         admin(message)
     if message.text[1:] in data:
-        msg = message.text[1:] + '. ' + data[message.text[1:]]['name'] + '\n' + data[message.text[1:]]['description']
+        msg = message.text[1:] + '. ' + data[message.text[1:]]['name'] + '\n' + data[message.text[1:]]['description'] +\
+              '\n' + data[message.text[1:]]['rooms']
         bot.send_message(message.chat.id, msg)
     if len(message.text) > 18:
         command = message.text[:-17]
         if command[1:] in data:
-            msg = command[1:] + '. ' + data[command[1:]]['name'] + '\n' + data[command[1:]]['description']
+            msg = command[1:] + '. ' + data[command[1:]]['name'] + '\n' + data[command[1:]]['description'] + '\n' + \
+                  data[command[1:]]['rooms']
             bot.send_message(message.chat.id, msg)
 
 
@@ -68,8 +70,7 @@ def admin(message):
     markup = types.InlineKeyboardMarkup(row_width=1)
     time_of_feeding_button = types.InlineKeyboardButton('Изменить время полива', callback_data='time_of_feeding')
     add_plant_button = types.InlineKeyboardButton('Добавить растение', callback_data='add_plant')
-    change_button = types.InlineKeyboardButton('Изменить уже введенное', callback_data='change')
-    markup.add(time_of_feeding_button, add_plant_button, change_button)
+    markup.add(time_of_feeding_button, add_plant_button)
     bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=markup)
 
 
@@ -102,9 +103,16 @@ def after_add_plant(message):
 def after_add_plant_2(message):
     global data
     data[str(data['cnt_plants'])]['description'] = message.text[1:]
-    bot.send_message(message.chat.id, f'Описание сохранено. Твое растение сохранено под номером {data["cnt_plants"]}. '
-                                      f'Ты можешь написать /{data["cnt_plants"]},'
-                                      f' чтобы увидеть подробную информацию о растении.')
+    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/"')
+    bot.register_next_step_handler(msg, after_add_plant_3)
+
+
+def after_add_plant_3(message):
+    global data
+    data[str(data['cnt_plants'])]['rooms'] = message.text[1:]
+    msg = f'Твое растение сохранено под номером {data["cnt_plants"]}. Ты можешь написать /{data["cnt_plants"]},' \
+          f' чтобы увидеть подробную информацию о растении.'
+    bot.send_message(message.chat.id, msg)
 
 
 def reminder():
