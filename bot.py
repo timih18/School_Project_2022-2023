@@ -13,7 +13,7 @@ plant = ''
 def start(message):
     global data
     if message.chat.id not in data:
-        data_new = {'cnt_plants': 0, 'admin_id': message.from_user.id, 'chat_id': message.chat.id}
+        data_new = {'cnt_plants': 0, 'admin_id': message.from_user.id}
         data[message.chat.id] = data_new
     markup = types.InlineKeyboardMarkup(row_width=1)
     admin_button = types.InlineKeyboardButton('Настройка бота', callback_data='admin')
@@ -183,7 +183,7 @@ def reminder():
             if 'time_since_feed' in data[key][str(i)]:
                 if data[key][str(i)]['time_of_feeding'] == data[key][str(i)]['time_since_feed']:
                     msg = f'Надо полить <b>{data[key][str(i)]["name"]}</b> (номер {i}).'
-                    bot.send_message(data[key]['chat_id'], msg, parse_mode='html')
+                    bot.send_message(key, msg, parse_mode='html')
                     data[key][str(i)]['time_since_feed'] = 0
                 else:
                     data[key][str(i)]['time_since_feed'] += 1
