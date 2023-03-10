@@ -44,6 +44,8 @@ def callback(call):
                 delete_all(call.message)
             elif call.data == 'yes_delete':
                 after_delete_all(call.message)
+            elif call.data == 'change_irrigating':
+                change_irrigating(call.message)
         else:
             bot.send_message(call.message.chat.id, 'Ты не администратор этого бота!')
 
@@ -59,16 +61,19 @@ def text(message):
     if message.text[1:] in data[message.chat.id]:
         msg = f'<b>{message.text[1:]}</b>' + '<b>.</b> ' + f'<b>{data[message.chat.id][message.text[1:]]["name"]}</b>' \
               + '\n' + 'Поливать каждые ' + str(data[message.chat.id][message.text[1:]]['time_of_feeding']) + \
-              ' дня/дней' + '\n' + 'Описание: ' + data[message.chat.id][message.text[1:]]['description'] + '\n' + \
-              'Кабинеты: ' + data[message.chat.id][message.text[1:]]['rooms']
+              ' дня/дней' + '\n' + 'Опрыскивать листья каждые ' + \
+              str(data[message.chat.id][message.text[1:]]['time_of_irrigating']) + ' дня/дней' + '\n' + 'Описание: ' + \
+              data[message.chat.id][message.text[1:]]['description'] + '\n' + 'Кабинеты: ' + \
+              data[message.chat.id][message.text[1:]]['rooms']
         bot.send_message(message.chat.id, msg, parse_mode='html')
     if len(message.text) > 20:
         command = message.text[:-19]
         if command[1:] in data[message.chat.id]:
             msg = f'<b>{command[1:]}</b>' + '<b>.</b> ' + f'<b>{data[message.chat.id][command[1:]]["name"]}</b>' + \
                   '\n' + 'Поливать каждые ' + str(data[message.chat.id][command[1:]]['time_of_feeding']) + ' дня/дней' \
-                  + '\n' + 'Описание: ' + data[message.chat.id][command[1:]]['description'] + '\n' + 'Кабинеты: ' + \
-                  data[message.chat.id][command[1:]]['rooms']
+                  + '\n' + 'Опрыскивать листья каждые ' + str(data[message.chat.id][command[1:]]['time_of_irrigating'])\
+                  + ' дня/дней' + '\n' + 'Описание: ' + data[message.chat.id][command[1:]]['description'] + '\n' + \
+                  'Кабинеты: ' + data[message.chat.id][command[1:]]['rooms']
             bot.send_message(message.chat.id, msg, parse_mode='html')
     if message.text == '/list' or message.text == '/list@sch1561_plants_bot':
         if data[message.chat.id]['cnt_plants'] > 0:
@@ -81,12 +86,13 @@ def text(message):
 
 
 def admin(message):
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    markup = types.InlineKeyboardMarkup(row_width=2)
     add_plant_button = types.InlineKeyboardButton('Добавить растение', callback_data='add_plant')
     change_time_button = types.InlineKeyboardButton('Изменить время полива', callback_data='change_time')
     delete_plant_button = types.InlineKeyboardButton('Удалить растение', callback_data='delete_plant')
     delete_all_button = types.InlineKeyboardButton('Очистить данные', callback_data='delete_all')
-    markup.add(add_plant_button, change_time_button, delete_plant_button, delete_all_button)
+    change_irrigating_button = types.InlineKeyboardButton('Изменить время орошения', callback_data='change_irrigating')
+    markup.add(add_plant_button, delete_plant_button, change_time_button, change_irrigating_button, delete_all_button)
     bot.send_message(message.chat.id, 'Что ты хочешь сделать?', reply_markup=markup)
 
 
@@ -115,11 +121,19 @@ def after_add_plant_3(message):
     global data
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_feeding'] = int(message.text[1:])
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_feed'] = 0
-    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/".')
+    msg = bot.send_message(message.chat.id, 'Раз в сколько дней ты будешь опрыскивать листья? Введи число через "/".')
     bot.register_next_step_handler(msg, after_add_plant_4)
 
 
 def after_add_plant_4(message):
+    global data
+    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_irrigating'] = int(message.text[1:])
+    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_irrigating'] = 0
+    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/".')
+    bot.register_next_step_handler(msg, after_add_plant_5)
+
+
+def after_add_plant_5(message):
     global data
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['rooms'] = message.text[1:]
     msg = f'Твое растение сохранено под номером {data[message.chat.id]["cnt_plants"]}. Ты можешь написать ' \
@@ -176,6 +190,26 @@ def after_delete_all(message):
     bot.send_message(message.chat.id, 'Данные удалены.')
 
 
+def change_irrigating(message):
+    msg = bot.send_message(message.chat.id, 'Введи через "/" номер растения, для которого хочешь изменить время '
+                                            'опрыскивания.')
+    bot.register_next_step_handler(msg, after_change_irrigating)
+
+
+def after_change_irrigating(message):
+    global plant
+    plant = message.text[1:]
+    msg = bot.send_message(message.chat.id, 'Теперь введи новое время опрыскивания через "/".')
+    bot.register_next_step_handler(msg, after_change_irrigating_2)
+
+
+def after_change_irrigating_2(message):
+    global plant
+    data[message.chat.id][plant]['time_of_irrigating'] = int(message.text[1:])
+    data[message.chat.id][plant]['time_since_irrigating'] = 0
+    bot.send_message(message.chat.id, 'Время опрыскивания изменено.')
+
+
 def reminder():
     global data
     for key in data:
@@ -187,6 +221,13 @@ def reminder():
                     data[key][str(i)]['time_since_feed'] = 0
                 else:
                     data[key][str(i)]['time_since_feed'] += 1
+            if 'time_since_irrigating' in data[key][str(i)]:
+                if data[key][str(i)]['time_of_irrigating'] == data[key][str(i)]['time_since_irrigating']:
+                    msg = f'Надо опрыснуть листья <b>{data[key][str(i)]["name"]}</b> (номер {i}).'
+                    bot.send_message(key, msg, parse_mode='html')
+                    data[key][str(i)]['time_since_irrigating'] = 0
+                else:
+                    data[key][str(i)]['time_since_irrigating'] += 1
 
 
 def main():
