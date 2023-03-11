@@ -231,9 +231,7 @@ def reminder():
 
 
 def main():
-    schedule.every(1).days.do(reminder)
-    # ДЛЯ ПРИМЕРА
-    schedule.every(1).seconds.do(reminder)
+    schedule.every().day.at('9:00').do(reminder)
 
     while True:
         schedule.run_pending()
