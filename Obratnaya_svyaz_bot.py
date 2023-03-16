@@ -51,8 +51,6 @@ def q2(message):
         connection.commit()
     bot.send_message(message.chat.id,
                      'Какие НЕДОСТАТКИ нашего проекта вы заметили?')
-    bot.send_message(message.chat.id,
-                     'Спасибо, ваш ответ очень важен для нас.')
     bot.register_next_step_handler(message, q3);
 
 
@@ -60,6 +58,8 @@ def q3(message):
     with connection.cursor() as cursor:
         cursor.execute("UPDATE chats_id set q3 = %s WHERE chat_id=%s", (message.text, message.chat.id))
         connection.commit()
+    bot.send_message(message.chat.id,
+                     'Спасибо, ваш ответ очень важен для нас.')
 
 
 bot.polling(none_stop=True)
