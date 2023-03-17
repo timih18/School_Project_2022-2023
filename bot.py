@@ -1,12 +1,17 @@
 import telebot
+import ast
 from telebot import types
 import schedule
 from threading import Thread
 from TOKEN import token
 
 bot = telebot.TeleBot(token)
-data = {}
+file = open('data.txt', 'r')
+lines = file.readlines()
+data = ast.literal_eval(lines[0])
+file.close()
 plant = ''
+# todo: добавить запись в текстовый файл
 
 
 @bot.message_handler(commands=['start'])
@@ -25,6 +30,7 @@ def start(message):
                                                                                         'данные, с помощью /admin => ' \
                                                                                         '"Очистить данные".'
     bot.send_message(message.chat.id, text_start, parse_mode='html', reply_markup=markup)
+    update_data(data)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -108,6 +114,7 @@ def after_add_plant(message):
     bot.register_next_step_handler(msg, after_add_plant_2)
     data[message.chat.id]['cnt_plants'] += 1
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])] = data_plant
+    update_data(data)
 
 
 def after_add_plant_2(message):
@@ -115,6 +122,7 @@ def after_add_plant_2(message):
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['description'] = message.text[1:]
     msg = bot.send_message(message.chat.id, 'Раз в сколько дней присылать уведомления о поливе? Введи число через "/".')
     bot.register_next_step_handler(msg, after_add_plant_3)
+    update_data(data)
 
 
 def after_add_plant_3(message):
@@ -123,6 +131,7 @@ def after_add_plant_3(message):
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_feed'] = 0
     msg = bot.send_message(message.chat.id, 'Раз в сколько дней ты будешь опрыскивать листья? Введи число через "/".')
     bot.register_next_step_handler(msg, after_add_plant_4)
+    update_data(data)
 
 
 def after_add_plant_4(message):
@@ -131,6 +140,7 @@ def after_add_plant_4(message):
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_irrigating'] = 0
     msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/".')
     bot.register_next_step_handler(msg, after_add_plant_5)
+    update_data(data)
 
 
 def after_add_plant_5(message):
@@ -139,6 +149,7 @@ def after_add_plant_5(message):
     msg = f'Твое растение сохранено под номером {data[message.chat.id]["cnt_plants"]}. Ты можешь написать ' \
           f'/{data[message.chat.id]["cnt_plants"]}, чтобы увидеть подробную информацию о растении.'
     bot.send_message(message.chat.id, msg)
+    update_data(data)
 
 
 def change_time(message):
@@ -152,6 +163,7 @@ def after_change_time(message):
     plant = message.text[1:]
     msg = bot.send_message(message.chat.id, 'Теперь введи новое время полива через "/".')
     bot.register_next_step_handler(msg, after_change_time_2)
+    update_data(data)
 
 
 def after_change_time_2(message):
@@ -159,6 +171,7 @@ def after_change_time_2(message):
     data[message.chat.id][plant]['time_of_feeding'] = int(message.text[1:])
     data[message.chat.id][plant]['time_since_feed'] = 0
     bot.send_message(message.chat.id, 'Время полива изменено.')
+    update_data(data)
 
 
 def delete_plant(message):
@@ -175,6 +188,7 @@ def after_delete_plant(message):
     data[message.chat.id]['cnt_plants'] -= 1
     bot.send_message(message.chat.id, 'Растение удалено. Номера растений, стоящих после него изменены. Напиши /list, '
                                       'чтобы увидеть новые номера растений.')
+    update_data(data)
 
 
 def delete_all(message):
@@ -188,6 +202,7 @@ def after_delete_all(message):
     global data
     data.pop(message.chat.id)
     bot.send_message(message.chat.id, 'Данные удалены.')
+    update_data(data)
 
 
 def change_irrigating(message):
@@ -204,10 +219,20 @@ def after_change_irrigating(message):
 
 
 def after_change_irrigating_2(message):
-    global plant
+    global data, plant
     data[message.chat.id][plant]['time_of_irrigating'] = int(message.text[1:])
     data[message.chat.id][plant]['time_since_irrigating'] = 0
     bot.send_message(message.chat.id, 'Время опрыскивания изменено.')
+    update_data(data)
+
+
+def update_data(dictionary):
+    strings = open('data.txt', 'r').readlines()
+    strings.pop(0)
+    with open('data.txt', 'w') as document:
+        document.writelines(strings)
+        document.write(str(dictionary))
+    document.close()
 
 
 def reminder():
@@ -228,10 +253,12 @@ def reminder():
                     data[key][str(i)]['time_since_irrigating'] = 0
                 else:
                     data[key][str(i)]['time_since_irrigating'] += 1
+            update_data(data)
 
 
 def main():
     schedule.every(1).days.at('10:15').do(reminder)
+    schedule.every(1).second.do(reminder)
 
     while True:
         schedule.run_pending()
