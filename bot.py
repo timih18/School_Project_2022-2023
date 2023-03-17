@@ -11,7 +11,6 @@ lines = file.readlines()
 data = ast.literal_eval(lines[0])
 file.close()
 plant = ''
-# todo: добавить запись в текстовый файл
 
 
 @bot.message_handler(commands=['start'])
