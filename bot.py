@@ -257,7 +257,6 @@ def reminder():
 
 def main():
     schedule.every(1).days.at('10:15').do(reminder)
-    schedule.every(1).second.do(reminder)
 
     while True:
         schedule.run_pending()
