@@ -1,18 +1,15 @@
 import telebot
-import pymysql
-from TOKEN import token
+import psycopg2
+from TOKEN import token, user, password, port, database, host
 
 bot = telebot.TeleBot(token)
 
 try:
-    connection = pymysql.connect(
-        host='127.0.0.1',
-        port=3306,
-        user='root',
-        password='root',
-        database='plants',
-        cursorclass=pymysql.cursors.DictCursor
-    )
+    connection = psycopg2.connect(user=user,
+                                  password=password,
+                                  host=host,
+                                  port=port,
+                                  database=database)
     print('succesfully connected...')
 except Exception as ex:
     print('Connection refused...')
