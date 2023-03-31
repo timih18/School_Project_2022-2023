@@ -110,36 +110,45 @@ def after_add_plant(message):
     global data
     data_plant = {'name': message.text[1:]}
     msg = bot.send_message(message.chat.id, 'Теперь введи краткое описание через "/".')
-    bot.register_next_step_handler(msg, after_add_plant_2)
     data[message.chat.id]['cnt_plants'] += 1
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])] = data_plant
     update_data(data)
+    bot.register_next_step_handler(msg, after_add_plant_2)
 
 
 def after_add_plant_2(message):
     global data
     data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['description'] = message.text[1:]
     msg = bot.send_message(message.chat.id, 'Раз в сколько дней присылать уведомления о поливе? Введи число через "/".')
-    bot.register_next_step_handler(msg, after_add_plant_3)
     update_data(data)
+    bot.register_next_step_handler(msg, after_add_plant_3)
 
 
 def after_add_plant_3(message):
     global data
-    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_feeding'] = int(message.text[1:])
-    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_feed'] = 0
-    msg = bot.send_message(message.chat.id, 'Раз в сколько дней ты будешь опрыскивать листья? Введи число через "/".')
-    bot.register_next_step_handler(msg, after_add_plant_4)
-    update_data(data)
+    try:
+        data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_feeding'] = int(message.text[1:])
+        data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_feed'] = 1
+        text_msg = 'Раз в сколько дней ты будешь опрыскивать листья? Введи число через "/".'
+        msg = bot.send_message(message.chat.id, text_msg)
+        update_data(data)
+        bot.register_next_step_handler(msg, after_add_plant_4)
+    except Exception as exception:
+        msg = bot.send_message(message.chat.id, f'Ошибка: {exception}! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_add_plant_3)
 
 
 def after_add_plant_4(message):
     global data
-    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_irrigating'] = int(message.text[1:])
-    data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_irrigating'] = 0
-    msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/".')
-    bot.register_next_step_handler(msg, after_add_plant_5)
-    update_data(data)
+    try:
+        data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_of_irrigating'] = int(message.text[1:])
+        data[message.chat.id][str(data[message.chat.id]['cnt_plants'])]['time_since_irrigating'] = 1
+        msg = bot.send_message(message.chat.id, 'Введи номера кабинетов, в которых будет стоять растение через "/".')
+        update_data(data)
+        bot.register_next_step_handler(msg, after_add_plant_5)
+    except Exception as exception:
+        msg = bot.send_message(message.chat.id, f'Ошибка: {exception}! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_add_plant_4)
 
 
 def after_add_plant_5(message):
@@ -160,17 +169,24 @@ def change_time(message):
 def after_change_time(message):
     global plant
     plant = message.text[1:]
-    msg = bot.send_message(message.chat.id, 'Теперь введи новое время полива через "/".')
-    bot.register_next_step_handler(msg, after_change_time_2)
-    update_data(data)
+    if plant in data[message.chat.id]:
+        msg = bot.send_message(message.chat.id, 'Теперь введи новое время полива через "/".')
+        bot.register_next_step_handler(msg, after_change_time_2)
+    else:
+        msg = bot.send_message(message.chat.id, f'Такого номера нет в списке растений! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_change_time)
 
 
 def after_change_time_2(message):
     global data, plant
-    data[message.chat.id][plant]['time_of_feeding'] = int(message.text[1:])
-    data[message.chat.id][plant]['time_since_feed'] = 0
-    bot.send_message(message.chat.id, 'Время полива изменено.')
-    update_data(data)
+    try:
+        data[message.chat.id][plant]['time_of_feeding'] = int(message.text[1:])
+        data[message.chat.id][plant]['time_since_feed'] = 1
+        bot.send_message(message.chat.id, 'Время полива изменено.')
+        update_data(data)
+    except Exception as exception:
+        msg = bot.send_message(message.chat.id, f'Ошибка: {exception}! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_change_time_2)
 
 
 def delete_plant(message):
@@ -181,13 +197,17 @@ def delete_plant(message):
 def after_delete_plant(message):
     global data
     elem = message.text[1:]
-    for i in range(int(elem), data[message.chat.id]['cnt_plants']):
-        data[message.chat.id][str(i)] = data[message.chat.id][str(i+1)]
-    data[message.chat.id].pop(str(data[message.chat.id]['cnt_plants']))
-    data[message.chat.id]['cnt_plants'] -= 1
-    bot.send_message(message.chat.id, 'Растение удалено. Номера растений, стоящих после него изменены. Напиши /list, '
-                                      'чтобы увидеть новые номера растений.')
-    update_data(data)
+    if elem in data[message.chat.id]:
+        for i in range(int(elem), data[message.chat.id]['cnt_plants']):
+            data[message.chat.id][str(i)] = data[message.chat.id][str(i+1)]
+        data[message.chat.id].pop(str(data[message.chat.id]['cnt_plants']))
+        data[message.chat.id]['cnt_plants'] -= 1
+        bot.send_message(message.chat.id, 'Растение удалено. Номера растений, стоящих после него изменены. Напиши '
+                                          '/list, чтобы увидеть новые номера растений.')
+        update_data(data)
+    else:
+        msg = bot.send_message(message.chat.id, f'Такого номера нет в списке растений! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_delete_plant)
 
 
 def delete_all(message):
@@ -213,16 +233,24 @@ def change_irrigating(message):
 def after_change_irrigating(message):
     global plant
     plant = message.text[1:]
-    msg = bot.send_message(message.chat.id, 'Теперь введи новое время опрыскивания через "/".')
-    bot.register_next_step_handler(msg, after_change_irrigating_2)
+    if plant in data[message.chat.id]:
+        msg = bot.send_message(message.chat.id, 'Теперь введи новое время опрыскивания через "/".')
+        bot.register_next_step_handler(msg, after_change_irrigating_2)
+    else:
+        msg = bot.send_message(message.chat.id, f'Такого номера нет в списке растений! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_change_irrigating)
 
 
 def after_change_irrigating_2(message):
     global data, plant
-    data[message.chat.id][plant]['time_of_irrigating'] = int(message.text[1:])
-    data[message.chat.id][plant]['time_since_irrigating'] = 0
-    bot.send_message(message.chat.id, 'Время опрыскивания изменено.')
-    update_data(data)
+    try:
+        data[message.chat.id][plant]['time_of_irrigating'] = int(message.text[1:])
+        data[message.chat.id][plant]['time_since_irrigating'] = 1
+        bot.send_message(message.chat.id, 'Время опрыскивания изменено.')
+        update_data(data)
+    except Exception as exception:
+        msg = bot.send_message(message.chat.id, f'Ошибка: {exception}! Попробуйте снова.')
+        bot.register_next_step_handler(msg, after_change_irrigating_2)
 
 
 def update_data(dictionary):
@@ -242,21 +270,21 @@ def reminder():
                 if data[key][str(i)]['time_of_feeding'] == data[key][str(i)]['time_since_feed']:
                     msg = f'Надо полить <b>{data[key][str(i)]["name"]}</b> (номер {i}).'
                     bot.send_message(key, msg, parse_mode='html')
-                    data[key][str(i)]['time_since_feed'] = 0
+                    data[key][str(i)]['time_since_feed'] = 1
                 else:
                     data[key][str(i)]['time_since_feed'] += 1
             if 'time_since_irrigating' in data[key][str(i)]:
                 if data[key][str(i)]['time_of_irrigating'] == data[key][str(i)]['time_since_irrigating']:
                     msg = f'Надо опрыснуть листья <b>{data[key][str(i)]["name"]}</b> (номер {i}).'
                     bot.send_message(key, msg, parse_mode='html')
-                    data[key][str(i)]['time_since_irrigating'] = 0
+                    data[key][str(i)]['time_since_irrigating'] = 1
                 else:
                     data[key][str(i)]['time_since_irrigating'] += 1
             update_data(data)
 
 
 def main():
-    schedule.every(1).days.at('10:15').do(reminder)
+    schedule.every().day.at('10:15').do(reminder)
 
     while True:
         schedule.run_pending()
